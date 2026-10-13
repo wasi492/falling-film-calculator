@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Falling Film Heat Transfer Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f2f6f8;--panel:#fff;--ink:#0e2430;--mute:#546a76;--line:#d3dfe5;
+  --acc:#0a6c97;--accbg:#e1f1f8;--warn:#9a5a00;--warnbg:#fff1d6;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0c1a22;--panel:#13262f;--ink:#e6f1f6;--mute:#93aab6;--line:#274250;--acc:#5cc0ea;--accbg:#12384a;--warn:#f2b45a;--warnbg:#3b2d12;}
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Source Sans 3",system-ui,-apple-system,sans-serif;
+  line-height:1.5;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;
+}
+main{width:100%;max-width:880px}
+h1{font-size:1.6rem;margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:var(--mute);margin:0 0 20px;font-size:0.95rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:720px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+label{display:block;font-weight:600;font-size:.9rem;margin:10px 0 4px}
+label small{font-weight:400;color:var(--mute)}
+input{
+  width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;
+  background:var(--bg);color:var(--ink);font:inherit;
+}
+input:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.actions{display:flex;gap:10px;margin-top:16px}
+button{
+  flex:1;padding:10px 14px;border-radius:6px;border:1px solid var(--acc);
+  background:var(--acc);color:#fff;font:inherit;font-weight:600;cursor:pointer;
+}
+button.ghost{background:transparent;color:var(--acc)}
+.big{font-size:2.8rem;font-weight:700;line-height:1.1;color:var(--acc);margin:4px 0 14px}
+.unit{font-size:1.05rem;color:var(--mute);font-weight:400}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.res div{background:var(--accbg);border-radius:8px;padding:12px}
+.res b{display:block;font-size:1.25rem}
+.res span{font-size:.82rem;color:var(--mute)}
+.err{color:var(--warn);font-size:.88rem;min-height:1.3em;margin-top:8px}
+
+/* Formula Box */
+.formula-box{
+  background:var(--accbg);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:14px 16px;
+  margin-top:14px;
+}
+.formula-title{
+  font-weight:700;
+  font-size:0.85rem;
+  color:var(--ink);
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  margin-bottom:10px;
+}
+.formula-item{
+  font-family:"Cambria Math","Latin Modern Math","STIX Two Math",Georgia,serif;
+  font-size:1.05rem;
+  padding:6px 0;
+  border-bottom:1px dashed var(--line);
+  color:var(--ink);
+}
+.formula-item:last-child{
+  border-bottom:none;
+  padding-bottom:0;
+}
+.f-sym{
+  font-weight:700;
+  color:var(--acc);
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Falling film heat transfer calculator</h1>
+  <p class="sub">Computes local heat transfer coefficient h, film thickness δ, and Reynolds number Re (Nusselt model for vertical wall).</p>
+
+  <div class="grid">
+    <!-- Input Section -->
+    <section class="panel" aria-label="Inputs">
+      <div class="row">
+        <div>
+          <label for="rhoL">ρ<sub>L</sub> <small>kg/m³ (liquid)</small></label>
+          <input id="rhoL" type="number" step="any" value="997">
+        </div>
+        <div>
+          <label for="rhov">ρ<sub>v</sub> <small>kg/m³ (vapor)</small></label>
+          <input id="rhov" type="number" step="any" value="0">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="mu">μ<sub>L</sub> <small>Pa·s (viscosity)</small></label>
+          <input id="mu" type="number" step="any" value="0.00089">
+        </div>
+        <div>
+          <label for="k">k<sub>L</sub> <small>W/m·K (conduct.)</small></label>
+          <input id="k" type="number" step="any" value="0.607">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="G">Γ <small>kg/(m·s) (flow/width)</small></label>
+          <input id="G" type="number" step="any" value="0.05">
+        </div>
+        <div>
+          <label for="g">g <small>m/s² (gravity)</small></label>
+          <input id="g" type="number" step="any" value="9.81">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="calc" type="button">Calculate</button>
+        <button id="reset" type="button" class="ghost">Reset</button>
+      </div>
+      <div class="err" id="err" role="alert"></div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="panel" aria-label="Results" aria-live="polite">
+      <div style="font-weight:600;color:var(--mute);font-size:.9rem">Heat transfer coefficient h</div>
+      <div class="big"><span id="h">–</span> <span class="unit">W/m²·K</span></div>
+      
+      <div class="res">
+        <div><b id="d">–</b><span>Film thickness δ (mm)</span></div>
+        <div><b id="re">–</b><span>Reynolds number Re</span></div>
+      </div>
+
+      <!-- Formula Box -->
+      <div class="formula-box">
+        <div class="formula-title">Governing Equations</div>
+        <div class="formula-item">
+          <span class="f-sym">δ</span> = [ 3 μ<sub>L</sub> Γ / ( ρ<sub>L</sub> (ρ<sub>L</sub> − ρ<sub>v</sub>) g ) ]<sup>1/3</sup>
+        </div>
+        <div class="formula-item">
+          <span class="f-sym">h</span> = k<sub>L</sub> / δ
+        </div>
+        <div class="formula-item">
+          <span class="f-sym">Re</span> = 4 Γ / μ<sub>L</sub>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function(){
+  var $ = function(i){ return document.getElementById(i); };
+  var ids = ['rhoL', 'rhov', 'mu', 'k', 'G', 'g'];
+  var defaults = {};
+  ids.forEach(function(i){ defaults[i] = $(i).value; });
+
+  function fmt(x, n){ return Number(x).toPrecision(n || 4); }
+
+  function calc(){
+    var e = $('err'); e.textContent = '';
+    var rl = +$('rhoL').value,
+        rv = +$('rhov').value,
+        mu = +$('mu').value,
+        k  = +$('k').value,
+        G  = +$('G').value,
+        g  = +$('g').value;
+
+    if (![rl, rv, mu, k, G, g].every(isFinite)) {
+      e.textContent = 'Please fill in all fields with valid numbers.';
+      return;
+    }
+    if (rl <= 0 || mu <= 0 || k <= 0 || G <= 0 || g <= 0) {
+      e.textContent = 'ρL, μL, kL, Γ, and g must be greater than zero.';
+      return;
+    }
+    if (rv < 0 || rv >= rl) {
+      e.textContent = 'ρv must be ≥ 0 and less than ρL.';
+      return;
+    }
+
+    // Nusselt falling film equations (vertical wall)
+    var delta = Math.cbrt((3 * mu * G) / (rl * (rl - rv) * g));
+    var h = k / delta;
+    var Re = (4 * G) / mu;
+
+    $('h').textContent = fmt(h, 4);
+    $('d').textContent = fmt(delta * 1000, 3);
+    $('re').textContent = fmt(Re, 4);
+  }
+
+  $('calc').onclick = calc;
+  $('reset').onclick = function(){
+    ids.forEach(function(i){ $(i).value = defaults[i]; });
+    $('err').textContent = '';
+    calc();
+  };
+
+  // Real-time calculation on input change
+  document.querySelectorAll('input').forEach(function(el){
+    el.addEventListener('input', calc);
+  });
+
+  calc();
+})();
+</script>
+</body>
+</html>
